@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #1e1e1e;
+        color: white;
+        padding: 10px;
+      }
+      h2 {
+        color: #00ffaa;
+      }
+      select {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        background: #2b2b2b;
+        color: white;
+        border: 1px solid #555;
+        border-radius: 5px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .item {
+        background-color: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .item:hover {
+        background-color: #333;
+        transform: scale(1.03);
+      }
+      .item img {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 5px;
+      }
+      .stock {
+        margin-top: 5px;
+        font-weight: bold;
+        color: #00ffaa;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      input {
+        padding: 8px;
+        background: #2b2b2b;
+        border: 1px solid #555;
+        color: white;
+        border-radius: 5px;
+        width: 100%;
+      }
+      button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .add { background: #00ffaa; color: black; }
+      .remove { background: #ff4c4c; color: white; }
+      .refresh {
+        background: #555;
+        color: white;
+        margin-top: 10px;
+        border-radius: 5px;
+        padding: 8px;
+        text-align: center;
+        cursor: pointer;
+      }
+      .message {
+        margin-top: 10px;
+        font-weight: bold;
+        color: #00ffaa;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>📦 Gérer le stock</h2>
+
+    <label for="categorie">Catégorie :</label>
+    <select id="categorie" onchange="filtrerCategorie()">
+      <option value="all">Toutes</option>
+      <option value="Accessoires - Outils">🧰 Accessoires - Outils</option>
+      <option value="Accessoires - Divers">🧩 Accessoires - Divers</option>
+      <option value="Munitions">💥 Munitions</option>
+      <option value="Pièces d'Armes">🛠 Pièces d'Armes</option>
+      <option value="Armes de Poing">🔫 Armes de Poing</option>
+      <option value="Mitraillette">🔥 Mitraillette</option>
+      <option value="Pompe">💣 Pompe</option>
+      <option value="Argent">💸 Argent</option>
+    </select>
+
+    <input type="number" id="quantite" value="1" min="1">
+
+    <div class="grid" id="produits"></div>
+
+    <div class="actions">
+      <button class="add" onclick="ajouter()">➕ Ajouter</button>
+      <button class="remove" onclick="retirer()">➖ Retirer</button>
+    </div>
+
+    <div class="refresh" onclick="chargerStock()">🔄 Rafraîchir les stocks</div>
+    <div id="message" class="message"></div>
+
+    <script>
+      let produitSelectionne = null;
+      let stockData = {};
+
+            const dataProduits = [
+        { nom: "Blowtorch", image: "https://w7.pngwing.com/pngs/661/245/png-transparent-butane-torch-blow-torch-gas-burner-soldering-irons-stations-blow-torch-angle-flame-gas-burner-thumbnail.png", categorie: "Accessoires - Outils" },
+        { nom: "Thermite", image: "https://w7.pngwing.com/pngs/778/467/png-transparent-septic-tank-wastewater-sewerage-thermite-public-relations-biologic-angle-public-relations-biologic.png", categorie: "Accessoires - Outils" },
+        { nom: "Explosif De Braquage", image: "https://liquipedia.net/commons/images/e/e6/Weapon_c4.png", categorie: "Accessoires - Outils" },
+        { nom: "Perceuse", image: "https://www.wikidebrouillard.org/images/a/a3/La_s_curit_de_l_utilisation_des_outils_perceuse-visseuse_0.png", categorie: "Accessoires - Outils" },
+        { nom: "Meuleuse", image: "https://e7.pngegg.com/pngimages/175/511/png-clipart-makita-9564cv-4-1-2-angle-grinder-grinders-tool-grinding-wheel-loading-angle-angle-grinder.png", categorie: "Accessoires - Outils" },
+        { nom: "Flare", image: "https://www.lesmagiciensdufeu.fr/wp-content/uploads/2024/05/Fumigenes120secorange-1.png", categorie: "Accessoires - Divers" },
+        { nom: "Lockpick", image: "https://e7.pngegg.com/pngimages/656/68/png-clipart-tool-lock-picking-key-car-lock-picking-angle-car-thumbnail.png", categorie: "Accessoires - Divers" },
+        { nom: "Clé Banque", image: "https://e7.pngegg.com/pngimages/289/989/png-clipart-usb-thumb-drive-usb-flash-drive-black-u-disk-electronics-black-hair.png", categorie: "Accessoires - Divers" },
+        { nom: "Clé ATM", image: "https://e7.pngegg.com/pngimages/289/989/png-clipart-usb-thumb-drive-usb-flash-drive-black-u-disk-electronics-black-hair.png", categorie: "Accessoires - Divers" },
+        { nom: "Argent", image: "https://static.vecteezy.com/system/resources/thumbnails/009/347/987/small_2x/3d-stack-of-us-dollar-notes-isolated-on-transparent-background-png.png", categorie: "Argent" },
+        { nom: ".44 Magnum", image: "https://atlas-content-cdn.pixelsquid.com/stock-images/44-magnum-cartridges-cartridge-3y61ae3-600.jpg", categorie: "Munitions" },
+        { nom: ".45 ACP", image: "https://e7.pngegg.com/pngimages/260/538/png-clipart-firearm-bullet-gun-holsters-cartridge-pistol-45-acp-ammunition-metal-thumbnail.png", categorie: "Munitions" },
+        { nom: "12 Gauge", image: "https://e7.pngegg.com/pngimages/876/159/png-clipart-shotgun-shell-ammunition-gauge-shotgun-slug-ammunition-miscellaneous-ammunition-thumbnail.png", categorie: "Munitions" },
+        { nom: "9 mm", image: "https://img.freepik.com/psd-gratuit/quatre-balles-9-mm-isolees-fond-transparent-munitions-armes-feu-cartouche-arme-cartouche-projectile-arme-feu-fusil-tir-portee-securite-auto-defense_632498-27230.jpg", categorie: "Munitions" },
+        { nom: ".50 AE", image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/2/2b/.50_AE_Ammo.png/revision/latest?cb=20181130235724", categorie: "Munitions" },
+        { nom: "Poignée", image: "https://e7.pngegg.com/pngimages/223/223/png-clipart-vz-58-pistol-grip-weapon-rifle-weapon-angle-weapon-thumbnail.png", categorie: "Pièces d'Armes" },
+        { nom: "Gâchette", image: "https://e7.pngegg.com/pngimages/332/189/png-clipart-trigger-speargun-air-gun-ranged-weapon-firearm-weapon-steel-weapon.png", categorie: "Pièces d'Armes" },
+        { nom: "Ressort", image: "https://i.imgur.com/WydU4Fg.png", categorie: "Pièces d'Armes" },
+        { nom: "Corps D'armes", image: "https://i.imgur.com/hYQyK1A.png", categorie: "Pièces d'Armes" },
+        { nom: "Sélecteur De Tir", image: "https://i.imgur.com/CNe7vnc.png", categorie: "Pièces d'Armes" },
+        { nom: "Canon", image: "https://i.imgur.com/Evv9uF4.png", categorie: "Pièces d'Armes" },
+        { nom: "Walter PPK", image: "https://www.grandtheftauto5.fr/images/armes/hd/pi-petoire.png", categorie: "Armes de Poing" },
+        { nom: "Berreta M9", image: "https://w7.pngwing.com/pngs/1010/383/png-transparent-beretta-m9-beretta-92-pistol-firearm-weapon-handgun-airsoft-weapon-thumbnail.png", categorie: "Armes de Poing" },
+        { nom: "Desert Eagle", image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRhKDYBPSLUWLWcijBNsL9J2yuA5P7p8KlFnA&s", categorie: "Armes de Poing" },
+        { nom: "Five Seven", image: "https://w7.pngwing.com/pngs/949/693/png-transparent-counter-strike-global-offensive-fn-five-seven-fn-herstal-fn-5-7%C3%9728mm-firearm-others-airsoft-handgun-ammunition-thumbnail.png", categorie: "Armes de Poing" },
+        { nom: "Glock 18C", image: "https://cybergunstore.fr/wp-content/uploads/2023/12/10644-large_default.jpg-300x225.png", categorie: "Armes de Poing" },
+        { nom: "Mac 11", image: "https://i.imgur.com/K5O2TzH.png", categorie: "Mitraillette" },
+        { nom: "Skorpion VZ61", image: "https://i.imgur.com/PRSmMli.png", categorie: "Mitraillette" },
+        { nom: "AKU", image: "https://i.imgur.com/QUW2uTh.png", categorie: "Mitraillette" },
+        { nom: "Mosenberg", image: "https://i.imgur.com/4qvNvCw.png", categorie: "Pompe" }
+      ];
+
+
+      const grid = document.getElementById("produits");
+
+      function afficherProduits(produits) {
+        grid.innerHTML = "";
+        produits.forEach(p => {
+          const div = document.createElement("div");
+          div.className = "item";
+          div.innerHTML = `
+            <img src="${p.image}">
+            <div>${p.nom}</div>
+            <div class="stock">${stockData[p.nom] ?? 0} en stock</div>
+          `;
+          div.onclick = () => {
+            produitSelectionne = p.nom;
+            document.querySelectorAll(".item").forEach(el => el.style.border = "1px solid #444");
+            div.style.border = "2px solid #00ffaa";
+          };
+          grid.appendChild(div);
+        });
+      }
+
+      function filtrerCategorie() {
+        const cat = document.getElementById("categorie").value;
+        const produits = cat === "all" ? dataProduits : dataProduits.filter(p => p.categorie === cat);
+        afficherProduits(produits);
+      }
+
+      function afficherMessage(texte, couleur = "#00ffaa") {
+        const msg = document.getElementById("message");
+        msg.innerText = texte;
+        msg.style.color = couleur;
+        setTimeout(() => { msg.innerText = ""; }, 3000);
+      }
+
+      function chargerStock() {
+        google.script.run.withSuccessHandler(function(data) {
+          stockData = data;
+          filtrerCategorie();
+          afficherMessage("🔄 Stock mis à jour.");
+        }).getQuantitesParProduit();
+      }
+
+      function ajouter() {
+        const quantite = parseInt(document.getElementById("quantite").value);
+        if (!produitSelectionne) return afficherMessage("❌ Sélectionne un produit !", "red");
+        google.script.run.withSuccessHandler(() => {
+          chargerStock();
+          afficherMessage("✅ Stock ajouté !");
+        }).ajouterStockDepuisSidebar(produitSelectionne, quantite);
+      }
+
+      function retirer() {
+        const quantite = parseInt(document.getElementById("quantite").value);
+        if (!produitSelectionne) return afficherMessage("❌ Sélectionne un produit !", "red");
+        google.script.run.withSuccessHandler(() => {
+          chargerStock();
+          afficherMessage("✅ Stock retiré !");
+        }).incrementStockDepuisSidebar(produitSelectionne, -quantite);
+      }
+
+      window.onload = chargerStock;
+    </script>
+  </body>
+</html>
